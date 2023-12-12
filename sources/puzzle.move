@@ -1,4 +1,8 @@
 module 0x42::Puzzle {
+    spec module {
+        pragma verify = false;
+    }
+
     fun assert0(b: bool) {
         assert!(b, 0);
     }

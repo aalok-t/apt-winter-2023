@@ -19,6 +19,7 @@ module 0x42::basic_coin {
 
     // 2. Balance should persist on chain. In other words, it should not be removed from the global state.
     spec module {
+        pragma verify = true;
         invariant update forall addr: address: old(exists<Balance>(addr))
             ==> exists<Balance>(addr);
     }
@@ -33,7 +34,7 @@ module 0x42::basic_coin {
 
 
     // Task 1: Design high-level requirement for the withdraw function.
-    // Task 2: Enforce these requirements.
+    // Task 2: Enforce these requirements using formal specification.
     fun withdraw(account: &signer, amount: u64): u64 acquires Balance {
         let addr = signer::address_of(account);
         let balance = balance_of(addr);
@@ -60,16 +61,8 @@ module 0x42::basic_coin {
 
 
 
-
-
-
-
-
-
-
-
     // High-level requirements
-    //    Pre-conditions:
+    //    Pre-conditions/Abort conditions:
     //        Balance under the account signer should exist.
     //        The balance should be enough to support the withdrawal
     //
@@ -86,53 +79,81 @@ module 0x42::basic_coin {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
     spec withdraw {
         let addr = signer::address_of(account);
         aborts_if !exists<Balance>(addr);
         aborts_if global<Balance>(addr).value < amount + MIN_BALANCE;
-        ensures global<Balance>(addr).value <= old(global<Balance>(addr).value);
         ensures global<Balance>(addr).value == old(global<Balance>(addr).value) - amount;
         ensures result == amount;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // Task 3: Design and enforce requirements for the deposit and transfer functions.
     fun deposit(addr: address, amount: u64) acquires Balance{
         let balance = balance_of(addr);
         let balance_ref = &mut borrow_global_mut<Balance>(addr).value;
         *balance_ref = balance + amount;
     }
-    public fun transfer(from: &signer, to: address, amount: u64) acquires Balance {
+    // Task 4: Design and enforce requirements for the deposit and transfer functions.
+    fun transfer(from: &signer, to: address, amount: u64) acquires Balance {
         let from_addr = signer::address_of(from);
         assert!(from_addr != to, EEQUAL_ADDR);
         let check = withdraw(from, amount);
         deposit(to, check);
     }
-    // spec deposit {
-    //     let balance = global<Balance<CoinType>>(addr).coin.value;
-    //     let check_value = check.value;
-    //     aborts_if !exists<Balance<CoinType>>(addr);
-    //     aborts_if balance + check_value > MAX_U64;
-    //     let post balance_post = global<Balance<CoinType>>(addr).coin.value;
-    //     ensures balance_post == balance + check_value;
-    // }
+
+
+
+
+
+
+
+
+
+
+
+    // Solution to Task 3:
+    spec deposit {
+        aborts_if !exists<Balance>(addr);
+        let balance = global<Balance>(addr).value;
+        aborts_if balance + amount > MAX_U64;
+        let post balance_post = global<Balance>(addr).value;
+        ensures balance_post == balance + amount;
+    }
+
+    // Template for Task 4: Add aborts_if and ensures clauses.
     // spec transfer {
     //     let addr_from = signer::address_of(from);
-    //     let balance_from = global<Balance<CoinType>>(addr_from).coin.value;
-    //     let balance_to = global<Balance<CoinType>>(to).coin.value;
-    //     let post balance_from_post = global<Balance<CoinType>>(addr_from).coin.value;
-    //     let post balance_to_post = global<Balance<CoinType>>(to).coin.value;
-    //     aborts_if !exists<Balance<CoinType>>(addr_from);
-    //     aborts_if !exists<Balance<CoinType>>(to);
-    //     aborts_if balance_from < amount;
-    //     aborts_if balance_to + amount > MAX_U64;
-    //     aborts_if addr_from == to;
-    //     ensures balance_from_post == balance_from - amount;
-    //     ensures balance_to_post == balance_to + amount;
-    // }
-    // spec withdraw {
-    //     let balance = global<Balance<CoinType>>(addr).coin.value;
-    //     aborts_if !exists<Balance<CoinType>>(addr);
-    //     aborts_if balance < amount;
-    //     let post balance_post = global<Balance<CoinType>>(addr).coin.value;
-    //     ensures result == Coin<CoinType> { value: amount };
-    //     ensures balance_post == balance - amount;
+    //     let balance_from = global<Balance>(addr_from).value;
+    //     let balance_to = global<Balance>(to).value;
+    //     let post balance_from_post = global<Balance>(addr_from).value;
+    //     let post balance_to_post = global<Balance>(to).value;
     // }
 }
